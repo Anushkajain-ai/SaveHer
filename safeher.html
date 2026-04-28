@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SafeHer - Women Safety</title>
+
+<style>
+body { font-family: Arial; margin:0; background:#f5f5f5; }
+header { background:#e63946; color:white; text-align:center; padding:15px; }
+nav { background:#333; padding:10px; text-align:center; }
+nav button { margin:5px; padding:10px; color:white; background:#555; border:none; cursor:pointer; }
+nav button:hover { background:#e63946; }
+
+.section { display:none; padding:20px; }
+.active { display:block; }
+
+.panic-btn {
+    background:red; color:white; padding:30px;
+    font-size:24px; border:none; border-radius:50%;
+    display:block; margin:30px auto; cursor:pointer;
+}
+
+.card { background:white; padding:15px; margin:10px 0; border-radius:10px; }
+
+input { width:100%; padding:10px; margin:5px 0; }
+
+button.submit { background:#e63946; color:white; padding:10px; border:none; }
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>SafeHer</h1>
+<p>Your Safety Companion</p>
+</header>
+
+<nav>
+<button onclick="showSection('home')">Home</button>
+<button onclick="showSection('profile')">Profile</button>
+<button onclick="showSection('contacts')">Contacts</button>
+</nav>
+
+<!-- HOME -->
+<div id="home" class="section active">
+<h2>Emergency Help</h2>
+<button class="panic-btn" onclick="panicAlert()">PANIC</button>
+<p style="text-align:center;">Click panic → WhatsApp opens → Press Send</p>
+</div>
+
+<!-- PROFILE -->
+<div id="profile" class="section">
+<h2>User Profile</h2>
+
+<input id="username" placeholder="Enter your name">
+<input id="userphone" placeholder="Enter your phone number">
+
+<button class="submit" onclick="saveUser()">Save Profile</button>
+
+<p id="savedUser"></p>
+</div>
+
+<!-- CONTACTS -->
+<div id="contacts" class="section">
+<h2>Emergency Contacts</h2>
+
+<input id="contactName" placeholder="Contact Name">
+<input id="contactPhone" placeholder="Contact Phone (with country code)">
+
+<button class="submit" onclick="addContact()">Add Contact</button>
+
+<div id="contactList"></div>
+</div>
+
+<script>
+
+// Navigation
+function showSection(id){
+    document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// PANIC BUTTON FUNCTION (WhatsApp + Location)
+function panicAlert(){
+
+    let contacts = JSON.parse(localStorage.getItem("contacts")) || [];
+
+    if(contacts.length === 0){
+        alert("No emergency contacts saved!");
+        return;
+    }
+
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(function(position){
+
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+
+            let locationLink = `https://maps.google.com/?q=${lat},${lon}`;
+
+            let message = `🚨 EMERGENCY! I need help.\nMy location: ${locationLink}`;
+
+            // Take first contact
+            let phone = contacts[0].phone.replace(/\D/g, "");
+
+            let whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+            // Open WhatsApp
+            window.open(whatsappURL, "_blank");
+
+        }, function(){
+            alert("Please allow location access!");
+        });
+
+    } else {
+        alert("Geolocation not supported!");
+    }
+}
+
+// Save User
+function saveUser(){
+    let name = document.getElementById("username").value;
+    let phone = document.getElementById("userphone").value;
+
+    localStorage.setItem("user", JSON.stringify({name, phone}));
+
+    document.getElementById("savedUser").innerText = "Saved: " + name + " (" + phone + ")";
+}
+
+// Load User
+function loadUser(){
+    let user = JSON.parse(localStorage.getItem("user"));
+    if(user){
+        document.getElementById("savedUser").innerText =
+            "Saved: " + user.name + " (" + user.phone + ")";
+    }
+}
+
+// Add Contact
+function addContact(){
+    let name = document.getElementById("contactName").value;
+    let phone = document.getElementById("contactPhone").value;
+
+    let contacts = JSON.parse(localStorage.getItem("contacts")) || [];
+
+    contacts.push({name, phone});
+
+    localStorage.setItem("contacts", JSON.stringify(contacts));
+
+    displayContacts();
+}
+
+// Display Contacts
+function displayContacts(){
+    let contacts = JSON.parse(localStorage.getItem("contacts")) || [];
+    let list = document.getElementById("contactList");
+
+    list.innerHTML = "";
+
+    contacts.forEach((c, index) => {
+        list.innerHTML += `
+        <div class="card">
+            ${c.name} - ${c.phone}
+            <button onclick="deleteContact(${index})">Delete</button>
+        </div>`;
+    });
+}
+
+// Delete Contact
+function deleteContact(index){
+    let contacts = JSON.parse(localStorage.getItem("contacts"));
+    contacts.splice(index, 1);
+    localStorage.setItem("contacts", JSON.stringify(contacts));
+    displayContacts();
+}
+
+// Load on start
+loadUser();
+displayContacts();
+
+</script>
+
+</body>
+</html>
